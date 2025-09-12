@@ -1,0 +1,7 @@
+{
+  "name": "teste-andar-geo",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
