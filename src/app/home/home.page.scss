@@ -1,27 +1,22 @@
-#container {
-  text-align: center;
+#map {
+  width: 100%;
+  height: 100dvh;
+  background: #ddd;
+}
 
+.custom-map-btn {
+  background-color: white;
+  border: 1px solid #888;
+  border-radius: 4px;
+  padding: 6px 12px;
+  margin: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  z-index: 5;
 }
 
-#container strong {
-  font-size: 20px;
-  line-height: 26px;
-}
-
-#container p {
-  font-size: 16px;
-  line-height: 22px;
-
-  color: #8c8c8c;
-
-  margin: 0;
-}
-
-#container a {
-  text-decoration: none;
+.custom-map-btn:hover {
+  background-color: #eee;
 }
