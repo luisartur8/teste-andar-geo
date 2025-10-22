@@ -14,6 +14,7 @@ import { InfoWindowService } from '../services/info-window.service';
 export class HomePage implements AfterViewInit {
   map!: google.maps.Map;
   floorManager!: FloorManager;
+  static editMode: boolean = false;
 
   constructor(private mapsLoader: GoogleMapsLoader) { }
 
@@ -26,8 +27,8 @@ export class HomePage implements AfterViewInit {
 
   private initMap(): void {
     const mapOptions = {
-      center: { lat: -28.6853, lng: -49.3706 },
-      zoom: 20,
+      center: { lat: -28.6720, lng: -49.3733 },
+      zoom: 10,
       mapTypeId: "roadmap",
       mapTypeControl: false,
       zoomControl: true,
@@ -78,11 +79,13 @@ export class HomePage implements AfterViewInit {
 
     google.maps.event.addListener(this.map, "click", () => {
       this.floorManager.disableAllShapes();
+      this.floorManager.renderFloors();
       InfoWindowService.close();
     });
 
     drawingManager.addListener("drawingmode_changed", () => {
       this.floorManager.disableAllShapes();
+      this.floorManager.renderFloors();
       InfoWindowService.close();
     });
 
@@ -97,7 +100,7 @@ export class HomePage implements AfterViewInit {
         if (!markerData) return;
 
         InfoWindowService.setFloorManager(this.floorManager);
-        InfoWindowService.open(marker, markerData);
+        InfoWindowService.open(marker, markerData, HomePage.editMode);
 
         this.floorManager.setEditable(marker);
       });

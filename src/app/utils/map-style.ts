@@ -10,4 +10,4 @@ export const cleanMapStyle: google.maps.MapTypeStyle[] = [
 	{ featureType: "transit", stylers: [{ visibility: "off" }] },
 ];
 
-export const iconColors = ["#BFFF00", "#0078FF", "#FF4B4B", "#28A745", "#FFC107", "#9C27B0"];
+export const iconColors: string[] = ["#BFFF00", "#0078FF", "#FF4B4B", "#28A745", "#FFC107", "#9C27B0"];

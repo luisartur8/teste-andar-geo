@@ -1,3 +1,4 @@
+import { HomePage } from "../home/home.page";
 import { iconColors } from "../utils/map-style";
 import { FloorManager } from "./floor-manager.service";
 
@@ -10,7 +11,7 @@ export class InfoWindowService {
 		this.floorManager = manager;
 	}
 
-	static open(marker: google.maps.Marker, data: { centered: boolean, zoom: number, icon: number, name: string, description: string }) {
+	static open(marker: google.maps.Marker, data: { centered: boolean, zoom: number, icon: number, name: string, description: string }, editMode: boolean) {
 		if (!this.infoWindow) {
 			this.infoWindow = new google.maps.InfoWindow();
 		}
@@ -19,7 +20,13 @@ export class InfoWindowService {
 			const centerContent = document.getElementById("centerContent");
 			if (!centerContent) return;
 
-			centerContent.innerHTML = data.centered ? this.generateCenterEnabledContent(data) : this.generateCenterDisabledContent(data);
+			if (editMode) {
+				centerContent.innerHTML = data.centered ? this.generateCenterEnabledContent(data) : this.generateCenterDisabledContent(data);
+			} else {
+				centerContent.innerHTML = this.generateOnlyShowContent(data);
+			}
+
+			if (!editMode) return;
 
 			const map = marker.getMap();
 			const zoomMinus = document.getElementById("zoomMinus");
@@ -53,15 +60,40 @@ export class InfoWindowService {
 			const descriptionInput = document.getElementById("descriptionInput") as HTMLTextAreaElement | null;
 
 			if (iconSelect) iconSelect.onchange = () => this.saveInputValues(marker, data);
-			if (nameInput) nameInput.oninput = () => this.saveInputValues(marker, data);
-			if (descriptionInput) descriptionInput.oninput = () => this.saveInputValues(marker, data);
+			if (nameInput) {
+				nameInput.oninput = () => {
+					if (nameInput.value.length > 20) {
+						nameInput.value = nameInput.value.slice(0, 20);
+					}
+
+					nameInput.style.color = nameInput.value.length >= 20 ? "#FFC107" : "";
+
+					this.saveInputValues(marker, data);
+				};
+			}
+			if (descriptionInput) {
+				descriptionInput.oninput = () => {
+					this.saveInputValues(marker, data);
+
+					const charCount = document.getElementById("charCount");
+					if (charCount) {
+						const len = descriptionInput.value.length;
+						charCount.textContent = `${len}/250`;
+						charCount.style.color = len > 250 ? "#FF4B4B" : "#666";
+					}
+				};
+			}
 		};
 
-		this.infoWindowContent = data.centered ? this.generateCenterEnabledContent(data) : this.generateCenterDisabledContent(data);
+		if (editMode) {
+			this.infoWindowContent = data.centered ? this.generateCenterEnabledContent(data) : this.generateCenterDisabledContent(data);
+		} else {
+			this.infoWindowContent = this.generateOnlyShowContent(data);
+		}
 
 		this.infoWindow.setContent(`
 			<div style="display:flex;flex-direction:column;gap:8px;">
-				${this.generateToggleSwitch("Centro do mapa", data)}
+				${HomePage.editMode ? this.generateToggleSwitch("Centro do mapa", data) : ""}
 				<div id="centerContent">
 					${this.infoWindowContent}
 				</div>
@@ -96,31 +128,31 @@ export class InfoWindowService {
 		this.infoWindow?.close();
 	}
 
-	private static generateToggleSwitch(label: string, data: { centered: boolean, zoom: number, icon: number, name: string, description: string }) {
+	private static generateOnlyShowContent(data: { name: string, description: string }) {
 		return `
-			<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;margin-bottom:12px;">
-				<div id="toggleContainer" style="
-						width: 50px; 
-						height: 26px; 
-						background-color: ${data.centered ? "#4CAF50" : "#ccc"};
-						border-radius: 13px; 
-						position: relative; 
-						cursor: pointer;
-						transition: background-color 0.3s;">
-					<div id="toggleBall" style="
-						width: 22px; 
-						height: 22px; 
-						background-color: #fff;
-						border-radius: 50%;
-						position: absolute;
-						top: 2px; 
-						left: ${data.centered ? "26px" : "2px"};
-						box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-						transition: left 0.3s;">
+			<div style="position:relative;display:flex;flex-direction:column;gap:4px;min-width:220px;overflow:visible;">
+				<div style="border:1px solid rgba(0,0,0,0.2);border-radius:6px;margin-top: 10px;padding:20px 8px 8px 8px;position:relative;box-sizing:border-box;overflow:visible;">
+					<span style="position:absolute;top:-10px;left:12px;background:white;padding:0 4px;font-size:14px;color:#333;white-space:nowrap;">
+						${data.name ?? ''}
+					</span>
+					<div style="font-size:14px;color:#555;margin-top:4px;max-height:120px;overflow-y:auto;">
+						${data.description ?? ""}
+						aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 					</div>
 				</div>
-				<span style="font-size:14px;">${label}</span>
 			</div>
+    `;
+	}
+
+	private static generateToggleSwitch(label: string, data: { centered: boolean, zoom: number, icon: number, name: string, description: string }) {
+		return `
+				<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;margin-bottom:12px;">
+					<div id="toggleContainer" style="width:50px;height:26px;background-color:${data.centered ? "#4CAF50" : "#ccc"};border-radius:13px;position:relative;cursor:pointer;transition:background-color 0.3s;">
+						<div id="toggleBall" style="width:22px;height:22px;background-color:#fff;border-radius:50%;position:absolute;top:2px;left:${data.centered ? "26px" : "2px"};box-shadow: 0 2px 4px rgba(0,0,0,0.3);transition: left 0.3s;">
+						</div>
+					</div>
+					<span style="font-size:14px;">${label}</span>
+				</div>
     `;
 	}
 
@@ -135,6 +167,8 @@ export class InfoWindowService {
 	}
 
 	private static generateCenterDisabledContent(data: { centered: boolean, zoom: number, icon: number, name: string, description: string }) {
+		const descriptionLength = data.description?.length ?? 0;
+
 		return `
 			<div style="display:flex;flex-direction:column;gap:10px;width:100%;box-sizing:border-box;overflow:hidden;">
 				<div style="display:flex;align-items:center;gap:8px;width:100%;">
@@ -152,7 +186,10 @@ export class InfoWindowService {
 					<input id="nameInput" type="text" value="${data.name ?? ''}" style="flex:1;padding:6px 8px;font-size:14px;border:1px solid #ccc;border-radius:6px;min-height:36px;box-sizing:border-box;width:calc(100% - 90px - 8px);"/>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:6px;width:100%;">
+					<div style="display:flex;align-items:center;justify-content:space-between;">
 					<label style="font-size:14px;">Descrição:</label>
+						<span id="charCount" style="font-size:12px;color:${descriptionLength > 250 ? "#FF4B4B" : "#666"};">${descriptionLength}/250</span>
+					</div>
 					<textarea id="descriptionInput" rows="4" style="width:100%;padding:8px;font-size:14px;border:1px solid #ccc;border-radius:6px;resize:vertical;box-sizing:border-box;">${data.description ?? ''}</textarea>
 				</div>
 			</div>
@@ -200,5 +237,4 @@ export class InfoWindowService {
 			}
 		});
 	}
-
 }

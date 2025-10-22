@@ -1,3 +1,4 @@
+import { HomePage } from "../home/home.page";
 import { Floor } from "../models/floor.model";
 import { InfoWindowService } from "./info-window.service";
 
@@ -62,7 +63,7 @@ export class FloorManager {
     div.style.alignItems = "center";
     div.style.justifyContent = "center";
     div.style.gap = "8px";
-    div.style.margin = "10px";
+    div.style.marginBottom = "10px";
     div.style.padding = "6px 10px";
     div.style.background = "#fff";
     div.style.border = "2px solid #4CAF50";
@@ -146,7 +147,7 @@ export class FloorManager {
     this.addCurrentFloorShapes();
   }
 
-  closeSideBar() {
+  private closeSideBar() {
     if (!this.sideBar) return;
 
     const panel = this.sideBar;
@@ -160,7 +161,7 @@ export class FloorManager {
     }, 300);
   }
 
-  openFloorSideBar(wrapper: HTMLDivElement, index: number) {
+  private openFloorSideBar(wrapper: HTMLDivElement, index: number) {
     if (this.sideBar && this.sideBar.parentElement === wrapper) {
       this.closeSideBar();
       return;
@@ -201,7 +202,7 @@ export class FloorManager {
     btnRemove.onclick = () => this.removeFloor(index);
     btnDuplicate.onclick = () => {
       const originalFloor = this.floors[index];
-      const clonedName = originalFloor.name + "_copy";
+      const clonedName = originalFloor.name[0] + "_copy";
 
       this.addFloor(clonedName);
       const newFloor = this.floors[this.floors.length - 1];
@@ -234,7 +235,7 @@ export class FloorManager {
               if (!markerData) return;
 
               InfoWindowService.setFloorManager(this);
-              InfoWindowService.open(newMapObject, markerData);
+              InfoWindowService.open(newMapObject, markerData, HomePage.editMode);
               this.setEditable(newMapObject);
             });
             break;
@@ -291,7 +292,7 @@ export class FloorManager {
 
     inputName.onchange = () => {
       if (inputName.value.length > 5) {
-        this.floors[index].name = inputName.value.slice(0, 5);
+        this.floors[index].name = inputName.value.slice(0, 6);
       } else {
         this.floors[index].name = inputName.value || this.floors[index].name;
       }
@@ -299,7 +300,7 @@ export class FloorManager {
     };
 
     inputName.addEventListener("input", () => {
-      if (inputName.value.length > 5) {
+      if (inputName.value.length > 6) {
         inputName.style.color = "red";
       } else {
         inputName.style.color = "";
@@ -307,7 +308,11 @@ export class FloorManager {
     });
   }
 
-  addFloor(name?: string) {
+  private addFloor(name?: string) {
+    if (this.floors.length >= 9) {
+      alert("Limite de andares atingido");
+      return;
+    }
     const floorName = name || String(this.floors.length + 1);
     this.floors.push({
       name: floorName,
@@ -318,8 +323,12 @@ export class FloorManager {
     this.renderFloors();
   }
 
-  removeFloor(index: number) {
-    if (this.floors.length <= 1) return;
+  private removeFloor(index: number) {
+    if (this.floors.length <= 1) {
+      alert("Você não pode apagar este andar");
+      this.renderFloors();
+      return;
+    };
     this.removeAllShapesFromMap();
     this.floors.splice(index, 1);
     if (this.currentFloorIndex >= this.floors.length) {
@@ -330,6 +339,7 @@ export class FloorManager {
   }
 
   addShapesToCurrentFloor(shapeType: "marker" | "circle" | "rectangle" | "polygon" | "polyline", data: any) {
+    this.renderFloors();
     const shapes = this.floors[this.currentFloorIndex].shapes;
     switch (shapeType) {
       case "marker": shapes.markers.push(data); break;
@@ -371,10 +381,11 @@ export class FloorManager {
     });
 
     this.editableShape = null;
+    this.controlShapesDiv.style.display = "none";
     this.deleteShapeBtn.style.display = "none";
   }
 
-  deleteEditableShape() {
+  private deleteEditableShape() {
     if (!this.editableShape) return;
 
     this.editableShape.setMap(null);
@@ -387,6 +398,7 @@ export class FloorManager {
     shapes.polylines = shapes.polylines.filter(s => s.mapObject !== this.editableShape);
 
     this.editableShape = null;
+    this.controlShapesDiv.style.display = "none";
     this.deleteShapeBtn.style.display = "none";
   }
 
@@ -402,7 +414,22 @@ export class FloorManager {
 
     this.editableShape = shape;
 
-    this.deleteShapeBtn.style.display = this.editableShape ? "block" : "none";
+    if (this.editableShape) {
+      this.deleteShapeBtn.style.display = "block";
+      this.controlShapesDiv.style.display = "flex";
+    }
+
+    this.forceCenterControl();
+  }
+
+  private forceCenterControl(): void {
+    if (!this.controlShapesDiv) return;
+
+    const mapDiv = this.map.getDiv() as HTMLDivElement;
+    const mapWidth = mapDiv.offsetWidth;
+    const divWidth = this.controlShapesDiv.offsetWidth;
+
+    this.controlShapesDiv.style.left = `${(mapWidth - divWidth) / 2}px`;
   }
 
   setMarkerData(marker: google.maps.Marker, data: Partial<{ centered: boolean, zoom: number, icon: number, name: string, description: string }>) {
