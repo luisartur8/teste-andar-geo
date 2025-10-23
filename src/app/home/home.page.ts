@@ -14,30 +14,60 @@ import { InfoWindowService } from '../services/info-window.service';
 export class HomePage implements AfterViewInit {
   map!: google.maps.Map;
   floorManager!: FloorManager;
-  static editMode: boolean = false;
+  static editMode: boolean = true;
 
   constructor(private mapsLoader: GoogleMapsLoader) { }
 
   async ngAfterViewInit() {
     await this.mapsLoader.load();
     this.initMap();
-    this.initDrawing();
+    if (HomePage.editMode) {
+      this.initDrawing();
+    }
     this.floorManager = new FloorManager(this.map);
   }
 
   private initMap(): void {
-    const mapOptions = {
+    const mapOptions: google.maps.MapOptions = {
       center: { lat: -28.6720, lng: -49.3733 },
-      zoom: 10,
+      zoom: 20,
+      minZoom: HomePage.editMode ? undefined : 19,
       mapTypeId: "roadmap",
-      mapTypeControl: false,
-      zoomControl: true,
-      streetViewControl: false,
-      fullscreenControl: false,
-      styles: cleanMapStyle
+      disableDefaultUI: true,
+      styles: cleanMapStyle,
+      restriction: HomePage.editMode ? undefined : {
+        latLngBounds: {
+          north: -28.6718,
+          south: -28.6722,
+          east: -49.3731,
+          west: -49.3735
+        },
+        strictBounds: true
+      }
     }
 
     this.map = new google.maps.Map(document.getElementById("map") as HTMLElement, mapOptions);
+
+    this.addBuildingOverlay();
+  }
+
+  private addBuildingOverlay(): void {
+    if (!this.map) return;
+
+    const imageBounds = {
+      north: -28.6718,
+      south: -28.6722,
+      east: -49.3731,
+      west: -49.3735
+    };
+
+    const overlay = new google.maps.GroundOverlay(
+      // "https://img.freepik.com/fotos-gratis/closeup-tiro-de-uma-linda-borboleta-com-texturas-interessantes-em-uma-flor-de-petalas-de-laranja_181624-7640.jpg?semt=ais_hybrid&w=740&q=80",
+      "./assets/image.png",
+      imageBounds
+    );
+
+    overlay.setMap(this.map);
   }
 
   private initDrawing(): void {
@@ -75,15 +105,15 @@ export class HomePage implements AfterViewInit {
       rectangleOptions: this.getDefaultShapeStyle(),
       polygonOptions: this.getDefaultShapeStyle(),
       polylineOptions: this.getDefaultShapeStyle()
-    })
+    });
 
-    google.maps.event.addListener(this.map, "click", () => {
+    drawingManager.addListener("drawingmode_changed", () => {
       this.floorManager.disableAllShapes();
       this.floorManager.renderFloors();
       InfoWindowService.close();
     });
 
-    drawingManager.addListener("drawingmode_changed", () => {
+    google.maps.event.addListener(this.map, "click", () => {
       this.floorManager.disableAllShapes();
       this.floorManager.renderFloors();
       InfoWindowService.close();

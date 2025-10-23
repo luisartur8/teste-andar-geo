@@ -137,7 +137,6 @@ export class InfoWindowService {
 					</span>
 					<div style="font-size:14px;color:#555;margin-top:4px;max-height:120px;overflow-y:auto;">
 						${data.description ?? ""}
-						aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 					</div>
 				</div>
 			</div>

@@ -24,7 +24,7 @@ export class FloorManager {
 
     // Botão de andares
     this.controlDiv = this.createControlContainer();
-    this.map.controls[google.maps.ControlPosition.LEFT_TOP].push(this.controlDiv);
+    this.map.controls[google.maps.ControlPosition.LEFT_CENTER].push(this.controlDiv);
 
     // Botão de controle dos shapes
     this.controlShapesDiv = this.createControlShapesDiv();
@@ -50,9 +50,12 @@ export class FloorManager {
     div.style.flexDirection = "column";
     div.style.alignItems = "center";
     div.style.justifyContent = "center";
-    div.style.height = "100%";
+    div.style.height = "auto";
+    div.style.pointerEvents = "auto";
     div.style.gap = "8px";
-    div.style.margin = "10px";
+    div.style.marginLeft = "10px";
+    div.style.padding = "4px";
+    div.style.borderRadius = "8px";
     return div;
   }
 
@@ -128,9 +131,11 @@ export class FloorManager {
       this.controlDiv.appendChild(wrapper);
     });
 
-    const addBtn = this.createCircleButton("+", "#fff", "#4CAF50", "2px solid #4CAF50");
-    addBtn.onclick = () => this.addFloor();
-    this.controlDiv.appendChild(addBtn);
+    if (HomePage.editMode) {
+      const addBtn = this.createCircleButton("+", "#fff", "#4CAF50", "2px solid #4CAF50");
+      addBtn.onclick = () => this.addFloor();
+      this.controlDiv.appendChild(addBtn);
+    }
 
     this.disableAllShapes();
   }
@@ -162,6 +167,10 @@ export class FloorManager {
   }
 
   private openFloorSideBar(wrapper: HTMLDivElement, index: number) {
+    if (!HomePage.editMode) {
+      return;
+    }
+
     if (this.sideBar && this.sideBar.parentElement === wrapper) {
       this.closeSideBar();
       return;
@@ -181,6 +190,37 @@ export class FloorManager {
     `;
 
     panel.innerHTML = `
+      <div style="width: 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;">
+          <button class="btn-moveup" ${index === 0 ? "disabled" : ""} style="
+            font-size: 13px;
+            line-height: 0.6; 
+            transform: scaleX(1.5);
+            padding: 2px 4px;
+            width: fit-content;
+            background: #D3D3D3;
+            border-width: 1.3px;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            margin-bottom: 1px;
+            ">∧</button>
+          <button class="btn-movedown" ${index === this.floors.length - 1 ? "disabled" : ""} style="
+            font-size: 13px;
+            display: inline-block;
+            padding: 2px 4px;
+            width: fit-content;
+            background:#D3D3D3;
+            border-width: 1.3px;
+            line-height: 0.6; 
+            transform: scaleX(1.5);
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+          ">∨</button>
+      </div>
       <button class="btn-remove" style="background:#ff4d4d;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;">🗑</button>
       <button class="btn-duplicate" style="background:#4CAF50;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;">⧉</button>
       <input type="text" class="floor-name" value="${this.floors[index].name}" style="flex:1;border:1px solid #ccc;border-radius:6px;padding:4px 6px;" />
@@ -195,11 +235,30 @@ export class FloorManager {
       panel.style.opacity = "1";
     }, 10);
 
+    const btnMoveUp = panel.querySelector(".btn-moveup") as HTMLButtonElement;
+    const btnMoveDown = panel.querySelector(".btn-movedown") as HTMLButtonElement;
     const btnRemove = panel.querySelector(".btn-remove") as HTMLButtonElement;
     const btnDuplicate = panel.querySelector(".btn-duplicate") as HTMLButtonElement;
     const inputName = panel.querySelector(".floor-name") as HTMLInputElement;
 
+    btnMoveUp.onclick = () => {
+      const arr = this.floors;
+      if (index <= 0) return;
+      [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+      this.currentFloorIndex -= 1;
+      this.renderFloors();
+    }
+
+    btnMoveDown.onclick = () => {
+      const arr = this.floors;
+      if (index >= arr.length - 1) return;
+      [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
+      this.currentFloorIndex += 1;
+      this.renderFloors();
+    }
+
     btnRemove.onclick = () => this.removeFloor(index);
+
     btnDuplicate.onclick = () => {
       const originalFloor = this.floors[index];
       const clonedName = originalFloor.name[0] + "_copy";
@@ -289,7 +348,6 @@ export class FloorManager {
       this.addCurrentFloorShapes();
     };
 
-
     inputName.onchange = () => {
       if (inputName.value.length > 5) {
         this.floors[index].name = inputName.value.slice(0, 6);
@@ -321,6 +379,7 @@ export class FloorManager {
     this.currentFloorIndex = this.floors.length - 1;
     this.removeAllShapesFromMap();
     this.renderFloors();
+    this.forceCenter(this.controlDiv, false, true);
   }
 
   private removeFloor(index: number) {
@@ -336,6 +395,7 @@ export class FloorManager {
     }
     this.addCurrentFloorShapes();
     this.renderFloors();
+    this.forceCenter(this.controlDiv, false, true);
   }
 
   addShapesToCurrentFloor(shapeType: "marker" | "circle" | "rectangle" | "polygon" | "polyline", data: any) {
@@ -419,17 +479,25 @@ export class FloorManager {
       this.controlShapesDiv.style.display = "flex";
     }
 
-    this.forceCenterControl();
+    this.forceCenter(this.controlShapesDiv, true, false);
   }
 
-  private forceCenterControl(): void {
-    if (!this.controlShapesDiv) return;
+  private forceCenter(div: HTMLDivElement, horizontal: boolean, vertical: boolean) {
+    if (!div) return;
 
     const mapDiv = this.map.getDiv() as HTMLDivElement;
-    const mapWidth = mapDiv.offsetWidth;
-    const divWidth = this.controlShapesDiv.offsetWidth;
 
-    this.controlShapesDiv.style.left = `${(mapWidth - divWidth) / 2}px`;
+    if (horizontal) {
+      const mapWidth = mapDiv.offsetWidth;
+      const divWidth = div.offsetWidth;
+      div.style.left = `${(mapWidth - divWidth) / 2}px`;
+    }
+
+    if (vertical) {
+      const mapHeight = mapDiv.offsetHeight;
+      const divHeight = div.offsetHeight;
+      div.style.top = `${(mapHeight - divHeight) / 2}px`;
+    }
   }
 
   setMarkerData(marker: google.maps.Marker, data: Partial<{ centered: boolean, zoom: number, icon: number, name: string, description: string }>) {
