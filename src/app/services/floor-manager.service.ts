@@ -1,5 +1,6 @@
 import { HomePage } from "../home/home.page";
 import { Floor } from "../models/floor.model";
+import { iconColors, testeFloorShapes } from "../utils/map-style";
 import { InfoWindowService } from "./info-window.service";
 
 export class FloorManager {
@@ -12,6 +13,8 @@ export class FloorManager {
 
   controlShapesDiv: HTMLDivElement;
   private deleteShapeBtn!: HTMLButtonElement;
+
+  controlSaveDiv: HTMLDivElement;
 
   private editableShape: any = null;
 
@@ -30,6 +33,12 @@ export class FloorManager {
     this.controlShapesDiv = this.createControlShapesDiv();
     this.map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(this.controlShapesDiv);
     this.deleteShapeBtn = this.controlShapesDiv.querySelector("button") as HTMLButtonElement;
+
+    // Botão de salvar
+    this.controlSaveDiv = this.createControlSaveDiv();
+    if (HomePage.editMode) {
+      this.map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(this.controlSaveDiv);
+    }
 
     this.renderFloors();
 
@@ -106,6 +115,204 @@ export class FloorManager {
     btn.style.border = border;
     btn.style.fontWeight = "bold";
     return btn;
+  }
+
+  private createControlSaveDiv() {
+    const div = document.createElement("div");
+    div.style.marginRight = "10px";
+    div.style.marginBottom = "10px";
+
+    const fab = document.createElement("ion-fab");
+    fab.setAttribute("vertical", "bottom");
+    fab.setAttribute("horizontal", "end");
+    fab.setAttribute("slot", "fixed");
+
+    const fabButton = document.createElement("ion-fab-button");
+    fabButton.setAttribute("color", "success");
+
+    const icon = document.createElement("ion-icon");
+    icon.setAttribute("name", "checkmark");
+
+    fabButton.appendChild(icon);
+    fab.appendChild(fabButton);
+    div.appendChild(fab);
+
+    fabButton.addEventListener("click", () => this.saveMap());
+
+    return div;
+  }
+
+  private saveMap() {
+    try {
+      const floorsData = this.floors.map(floor => ({
+        name: floor.name,
+        shapes: {
+          markers: floor.shapes.markers.map(m => ({
+            position: {
+              lat: m.mapObject.getPosition()?.lat() ?? 0,
+              lng: m.mapObject.getPosition()?.lng() ?? 0
+            },
+            centered: m.centered,
+            zoom: m.zoom,
+            name: m.name,
+            icon: m.icon,
+            description: m.description,
+          })),
+          circles: floor.shapes.circles.map(c => ({
+            center: {
+              lat: c.mapObject.getCenter()?.lat() ?? 0,
+              lng: c.mapObject.getCenter()?.lng() ?? 0
+            },
+            radius: c.mapObject.getRadius() ?? 0,
+            fillColor: c.mapObject.get("fillColor") ?? null,
+            fillOpacity: c.mapObject.get("fillOpacity") ?? null,
+            strokeColor: c.mapObject.get("strokeColor") ?? null,
+            strokeOpacity: c.mapObject.get("strokeOpacity") ?? null,
+            strokeWeight: c.mapObject.get("strokeWeight") ?? null
+          })),
+          rectangles: floor.shapes.rectangles.map(r => {
+            const bounds = r.mapObject.getBounds();
+            return {
+              bounds: bounds ? {
+                north: bounds.getNorthEast().lat(),
+                east: bounds.getNorthEast().lng(),
+                south: bounds.getSouthWest().lat(),
+                west: bounds.getSouthWest().lng()
+              } : null,
+              fillColor: r.mapObject.get("fillColor") ?? null,
+              fillOpacity: r.mapObject.get("fillOpacity") ?? null,
+              strokeColor: r.mapObject.get("strokeColor") ?? null,
+              strokeOpacity: r.mapObject.get("strokeOpacity") ?? null,
+              strokeWeight: r.mapObject.get("strokeWeight") ?? null
+            };
+          }),
+          polygons: floor.shapes.polygons.map(p => ({
+            path: p.mapObject.getPath()?.getArray().map(latlng => ({
+              lat: latlng.lat(),
+              lng: latlng.lng()
+            })) ?? [],
+            fillColor: p.mapObject.get("fillColor") ?? null,
+            fillOpacity: p.mapObject.get("fillOpacity") ?? null,
+            strokeColor: p.mapObject.get("strokeColor") ?? null,
+            strokeOpacity: p.mapObject.get("strokeOpacity") ?? null,
+            strokeWeight: p.mapObject.get("strokeWeight") ?? null
+          })),
+          polylines: floor.shapes.polylines.map(l => ({
+            path: l.mapObject.getPath()?.getArray().map(latlng => ({
+              lat: latlng.lat(),
+              lng: latlng.lng()
+            })) ?? [],
+            strokeColor: l.mapObject.get("strokeColor") ?? null,
+            strokeOpacity: l.mapObject.get("strokeOpacity") ?? null,
+            strokeWeight: l.mapObject.get("strokeWeight") ?? null
+          }))
+        }
+      }));
+
+      console.log("Floors JSON:", JSON.stringify(floorsData, null, 2));
+      alert("Mapa salvo no console!");
+
+    } catch (error) {
+      console.error("Erro ao salvar mapa:", error);
+    }
+  }
+
+  insertMapShapes(importedShapes: any[]) {
+    this.floors = (importedShapes as Floor[]).map((floor: Floor) => {
+      const newFloor: Floor = {
+        name: floor.name,
+        shapes: {
+          markers: (floor.shapes.markers as any[]).map(m => {
+            const { centered, zoom, icon, name, description } = m;
+
+            const mapObject = new google.maps.Marker({
+              position: m.position,
+              map: this.map,
+              draggable: true,
+              icon: iconColors[m.icon],
+              label: m.name
+            });
+
+            InfoWindowService.setMarkerIcon(mapObject, name, icon, centered);
+
+            const markerShape = { mapObject, centered, zoom, icon, name, description };
+
+            this.addShapesToCurrentFloor("marker", markerShape);
+
+            google.maps.event.addListener(mapObject, "click", () => {
+              InfoWindowService.setFloorManager(this);
+              InfoWindowService.open(mapObject, markerShape, HomePage.editMode);
+              this.setEditable(mapObject);
+            });
+
+            return markerShape;
+          }),
+          circles: (floor.shapes.circles as any[]).map(c => {
+            const mapObject = new google.maps.Circle({
+              map: this.map,
+              center: c.center,
+              radius: c.radius,
+              fillColor: c.fillColor || "#b3b3b3ff",
+              fillOpacity: c.fillOpacity ?? 1,
+              strokeColor: c.strokeColor || "#b3b3b3ff",
+              strokeOpacity: c.strokeOpacity ?? 1,
+              strokeWeight: c.strokeWeight ?? 3,
+            });
+
+            google.maps.event.addListener(mapObject, "click", () => this.setEditable(mapObject));
+
+            return { mapObject };
+          }),
+          rectangles: (floor.shapes.rectangles as any[]).map(r => {
+            const mapObject = new google.maps.Rectangle({
+              map: this.map,
+              bounds: r.bounds,
+              fillColor: r.fillColor || "#b3b3b3ff",
+              fillOpacity: r.fillOpacity ?? 1,
+              strokeColor: r.strokeColor || "#b3b3b3ff",
+              strokeOpacity: r.strokeOpacity ?? 1,
+              strokeWeight: r.strokeWeight ?? 3,
+            });
+
+            google.maps.event.addListener(mapObject, "click", () => this.setEditable(mapObject));
+            return { mapObject };
+          }),
+          polygons: (floor.shapes.polygons as any[]).map(p => {
+            const mapObject = new google.maps.Polygon({
+              map: this.map,
+              paths: p.path,
+              fillColor: p.fillColor || "#b3b3b3ff",
+              fillOpacity: p.fillOpacity ?? 1,
+              strokeColor: p.strokeColor || "#b3b3b3ff",
+              strokeOpacity: p.strokeOpacity ?? 1,
+              strokeWeight: p.strokeWeight ?? 3,
+            });
+
+            google.maps.event.addListener(mapObject, "click", () => this.setEditable(mapObject));
+            return { mapObject };
+          }),
+          polylines: (floor.shapes.polylines as any[]).map(l => {
+            const mapObject = new google.maps.Polyline({
+              map: this.map,
+              path: l.path,
+              strokeColor: l.strokeColor || "#b3b3b3ff",
+              strokeOpacity: l.strokeOpacity ?? 1,
+              strokeWeight: l.strokeWeight ?? 3,
+            });
+
+            google.maps.event.addListener(mapObject, "click", () => this.setEditable(mapObject));
+            return { mapObject };
+          }),
+        }
+      };
+
+      return newFloor;
+    });
+
+    this.currentFloorIndex = this.floors.length - 1;
+    this.removeAllShapesFromMap();
+    this.addCurrentFloorShapes();
+    this.renderFloors();
   }
 
   renderFloors() {
@@ -465,11 +672,13 @@ export class FloorManager {
   setEditable(shape: any) {
     this.disableAllShapes();
 
-    if (shape instanceof google.maps.Marker) {
+    if (shape instanceof google.maps.Marker && HomePage.editMode) {
       shape.setDraggable(true);
-    } else if (shape.setEditable) {
+    } else if (shape.setEditable && HomePage.editMode) {
       shape.setEditable(true);
       shape.setDraggable(true);
+    } else {
+      return; // Entra aqui quando está só no modo de visualização
     }
 
     this.editableShape = shape;

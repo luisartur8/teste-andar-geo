@@ -1,7 +1,7 @@
 import { AfterViewInit, Component } from '@angular/core';
 import { GoogleMapsLoader } from '../services/google-maps-loader.service';
 import { FloorManager } from '../services/floor-manager.service';
-import { cleanMapStyle, iconColors } from '../utils/map-style';
+import { cleanMapStyle, iconColors, testeFloorShapes } from '../utils/map-style';
 import { InfoWindowService } from '../services/info-window.service';
 
 @Component({
@@ -25,6 +25,7 @@ export class HomePage implements AfterViewInit {
       this.initDrawing();
     }
     this.floorManager = new FloorManager(this.map);
+    this.floorManager.insertMapShapes(testeFloorShapes);
   }
 
   private initMap(): void {
@@ -35,15 +36,15 @@ export class HomePage implements AfterViewInit {
       mapTypeId: "roadmap",
       disableDefaultUI: true,
       styles: cleanMapStyle,
-      restriction: HomePage.editMode ? undefined : {
-        latLngBounds: {
-          north: -28.6718,
-          south: -28.6722,
-          east: -49.3731,
-          west: -49.3735
-        },
-        strictBounds: true
-      }
+      // restriction: HomePage.editMode ? undefined : {
+      //   latLngBounds: {
+      //     north: -28.6718,
+      //     south: -28.6722,
+      //     east: -49.3731,
+      //     west: -49.3735
+      //   },
+      //   strictBounds: true
+      // }
     }
 
     this.map = new google.maps.Map(document.getElementById("map") as HTMLElement, mapOptions);
@@ -63,7 +64,7 @@ export class HomePage implements AfterViewInit {
 
     const overlay = new google.maps.GroundOverlay(
       // "https://img.freepik.com/fotos-gratis/closeup-tiro-de-uma-linda-borboleta-com-texturas-interessantes-em-uma-flor-de-petalas-de-laranja_181624-7640.jpg?semt=ais_hybrid&w=740&q=80",
-      "./assets/image.png",
+      "./assets/WC_1.png",
       imageBounds
     );
 
@@ -83,7 +84,7 @@ export class HomePage implements AfterViewInit {
         drawingModes: [OverlayType.MARKER, OverlayType.CIRCLE, OverlayType.POLYGON, OverlayType.POLYLINE, OverlayType.RECTANGLE]
       },
       markerOptions: {
-        draggable: true,
+        draggable: HomePage.editMode,
         icon: {
           path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z M12 11.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z",
           fillColor: iconColors[1],
