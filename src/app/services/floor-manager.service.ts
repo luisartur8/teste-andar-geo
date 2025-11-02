@@ -1,6 +1,6 @@
 import { HomePage } from "../home/home.page";
 import { Floor } from "../models/floor.model";
-import { iconColors, testeFloorShapes } from "../utils/map-style";
+import { iconColors } from "../utils/map-style";
 import { InfoWindowService } from "./info-window.service";
 
 export class FloorManager {
@@ -217,7 +217,7 @@ export class FloorManager {
     }
   }
 
-  insertMapShapes(importedShapes: any[]) {
+  insertMapShapes(importedShapes: object[]) {
     this.floors = (importedShapes as Floor[]).map((floor: Floor) => {
       const newFloor: Floor = {
         name: floor.name,

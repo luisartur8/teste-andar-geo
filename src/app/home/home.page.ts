@@ -1,7 +1,7 @@
 import { AfterViewInit, Component } from '@angular/core';
 import { GoogleMapsLoader } from '../services/google-maps-loader.service';
 import { FloorManager } from '../services/floor-manager.service';
-import { cleanMapStyle, iconColors, testeFloorShapes } from '../utils/map-style';
+import { cleanMapStyle, iconColors, mapaEsucriShapes } from '../utils/map-style';
 import { InfoWindowService } from '../services/info-window.service';
 
 @Component({
@@ -25,12 +25,12 @@ export class HomePage implements AfterViewInit {
       this.initDrawing();
     }
     this.floorManager = new FloorManager(this.map);
-    this.floorManager.insertMapShapes(testeFloorShapes);
+    this.floorManager.insertMapShapes(mapaEsucriShapes);
   }
 
   private initMap(): void {
     const mapOptions: google.maps.MapOptions = {
-      center: { lat: -28.6720, lng: -49.3733 },
+      center: { lat: -28.681528266431894, lng: -49.37356673246187 },
       zoom: 20,
       minZoom: HomePage.editMode ? undefined : 19,
       mapTypeId: "roadmap",
@@ -56,19 +56,25 @@ export class HomePage implements AfterViewInit {
     if (!this.map) return;
 
     const imageBounds = {
-      north: -28.6718,
-      south: -28.6722,
-      east: -49.3731,
-      west: -49.3735
+      north: -28.681362,  // -28.681333 - 0.00003
+      south: -28.681670,  // -28.681641 - 0.00003
+      east: -49.37337,    // -49.37335 - 0.00003
+      west: -49.37377     // -49.37375 - 0.00003
     };
 
-    const overlay = new google.maps.GroundOverlay(
-      // "https://img.freepik.com/fotos-gratis/closeup-tiro-de-uma-linda-borboleta-com-texturas-interessantes-em-uma-flor-de-petalas-de-laranja_181624-7640.jpg?semt=ais_hybrid&w=740&q=80",
-      "./assets/WC_1.png",
-      imageBounds
-    );
+    const overlay = new google.maps.GroundOverlay("./assets/imagemMapa1.png", imageBounds);
+    const overlay2 = new google.maps.GroundOverlay("./assets/imagemMapa2.png", imageBounds);
+    const overlay3 = new google.maps.GroundOverlay("./assets/imagemMapa3.png", imageBounds);
+    const overlay4 = new google.maps.GroundOverlay("./assets/imagemMapa4.png", imageBounds);
+    const overlay5 = new google.maps.GroundOverlay("./assets/imagemMapa5.png", imageBounds);
+    const overlay6 = new google.maps.GroundOverlay("./assets/imagemMapa6.png", imageBounds);
 
-    overlay.setMap(this.map);
+    // overlay.setMap(this.map);
+    // overlay2.setMap(this.map);
+    // overlay3.setMap(this.map);
+    // overlay4.setMap(this.map);
+    // overlay5.setMap(this.map);
+    // overlay6.setMap(this.map);
   }
 
   private initDrawing(): void {
@@ -84,7 +90,7 @@ export class HomePage implements AfterViewInit {
         drawingModes: [OverlayType.MARKER, OverlayType.CIRCLE, OverlayType.POLYGON, OverlayType.POLYLINE, OverlayType.RECTANGLE]
       },
       markerOptions: {
-        draggable: HomePage.editMode,
+        draggable: true,
         icon: {
           path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z M12 11.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z",
           fillColor: iconColors[1],
@@ -105,7 +111,7 @@ export class HomePage implements AfterViewInit {
       circleOptions: this.getDefaultShapeStyle(),
       rectangleOptions: this.getDefaultShapeStyle(),
       polygonOptions: this.getDefaultShapeStyle(),
-      polylineOptions: this.getDefaultShapeStyle()
+      polylineOptions: { ...this.getDefaultShapeStyle(), strokeColor: "black" }
     });
 
     drawingManager.addListener("drawingmode_changed", () => {
