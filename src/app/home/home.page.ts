@@ -21,6 +21,7 @@ export class HomePage implements AfterViewInit {
   async ngAfterViewInit() {
     await this.mapsLoader.load();
     this.initMap();
+    this.addUserLocationMarker();
     if (HomePage.editMode) {
       this.initDrawing();
     }
@@ -192,5 +193,50 @@ export class HomePage implements AfterViewInit {
       strokeOpacity: 1,
       strokeWeight: 3
     };
+  }
+
+  private addUserLocationMarker(): void {
+    if (!navigator.geolocation) {
+      console.error("Geolocalização não é suportada neste navegador.");
+      return;
+    }
+
+    let userMarker: google.maps.Marker | null = null;
+
+    navigator.geolocation.watchPosition(
+      (position) => {
+        const userLatLng = new google.maps.LatLng(
+          position.coords.latitude,
+          position.coords.longitude
+        );
+
+        if (!userMarker) {
+          userMarker = new google.maps.Marker({
+            position: userLatLng,
+            map: this.map,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 6,
+              fillColor: '#4285F4',
+              fillOpacity: 1,
+              strokeWeight: 2,
+              strokeColor: 'white',
+            },
+          });
+
+          this.map.setCenter(userLatLng);
+        } else {
+          userMarker.setPosition(userLatLng);
+        }
+      },
+      (error) => {
+        console.error("Erro ao obter localização:", error);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 5000,
+      }
+    );
   }
 }
