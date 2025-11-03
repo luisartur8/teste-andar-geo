@@ -16,6 +16,8 @@ export class FloorManager {
 
   controlSaveDiv: HTMLDivElement;
 
+  controlReturnDiv: HTMLDivElement;
+
   private editableShape: any = null;
 
   constructor(map: google.maps.Map) {
@@ -40,6 +42,10 @@ export class FloorManager {
       this.map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(this.controlSaveDiv);
     }
 
+    // Botão de voltar página
+    this.controlReturnDiv = this.createReturnContainer();
+    this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(this.controlReturnDiv);
+
     this.renderFloors();
 
     google.maps.event.addListener(this.map, "click", () => this.closeSideBar());
@@ -51,6 +57,41 @@ export class FloorManager {
       if (this.controlDiv.contains(target)) return;
       this.closeSideBar();
     });
+  }
+
+  private createReturnContainer(): HTMLDivElement {
+    const div = document.createElement("div");
+    div.style.display = "flex";
+    div.style.flexDirection = "row";
+    div.style.alignItems = "center";
+    div.style.justifyContent = "center";
+    div.style.gap = "8px";
+    div.style.marginTop = "10px";
+    div.style.marginLeft = "10px";
+    div.style.background = "#fff";
+    div.style.border = "2px solid #4CAF50";
+    div.style.borderRadius = "12px";
+    div.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+    div.style.pointerEvents = "auto";
+
+    const button = document.createElement("button");
+    button.innerHTML = "← Voltar";
+    button.style.background = "#4CAF50";
+    button.style.color = "#fff";
+    button.style.border = "none";
+    button.style.borderRadius = "8px";
+    button.style.padding = "6px 12px";
+    button.style.cursor = "pointer";
+    button.style.fontSize = "14px";
+    button.style.fontWeight = "bold";
+    button.style.transition = "background-color 0.2s ease";
+
+    button.addEventListener("click", () => {
+      alert("Voltou");
+    });
+
+    div.appendChild(button);
+    return div;
   }
 
   private createControlContainer(): HTMLDivElement {

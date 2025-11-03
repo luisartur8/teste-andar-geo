@@ -21,7 +21,7 @@ export class HomePage implements AfterViewInit {
   async ngAfterViewInit() {
     await this.mapsLoader.load();
     this.initMap();
-    this.addUserLocationMarker();
+    // this.addUserLocationMarker();
     if (HomePage.editMode) {
       this.initDrawing();
     }
